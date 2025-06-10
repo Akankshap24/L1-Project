@@ -36,16 +36,29 @@ def predict():
 
         future_start = pd.to_datetime(end_date) + timedelta(days=1)
         future_end = future_start + timedelta(days=14)
-        future_df = yf.download(ticker, start=future_start.strftime('%Y-%m-%d'), end=(future_end+timedelta(days=1)).strftime('%Y-%m-%d'))
+        future_df = yf.download(
+            ticker,
+            start=future_start.strftime('%Y-%m-%d'),
+            end=(future_end + timedelta(days=1)).strftime('%Y-%m-%d')
+        )
 
         actual_prices = future_df['Close'].tolist()
         dates = future_df.index.strftime('%Y-%m-%d').tolist()
 
-        min_len = min(len(predictions), len(actual_prices))
-        results = list(zip(dates[:min_len], predictions[:min_len], actual_prices[:min_len]))
+        # Prepare results (show 'N/A' if actual prices are not available)
+        results = list(zip(
+            dates[:len(predictions)],
+            predictions[:len(dates)],
+            actual_prices[:len(dates)] if len(actual_prices) else ['N/A'] * len(dates)
+        ))
 
-        mae = mean_absolute_error(actual_prices[:min_len], predictions[:min_len])
-        rmse = mean_squared_error(actual_prices[:min_len], predictions[:min_len], squared=False)
+        # Calculate errors only if actuals are present
+        if actual_prices:
+            mae = mean_absolute_error(actual_prices[:len(dates)], predictions[:len(dates)])
+            rmse = mean_squared_error(actual_prices[:len(dates)], predictions[:len(dates)], squared=False)
+        else:
+            mae = None
+            rmse = None
 
         return render_template('index.html', results=results, mae=mae, rmse=rmse, ticker=ticker)
 
